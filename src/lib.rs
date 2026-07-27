@@ -151,6 +151,7 @@ pub mod command;
 pub mod data;
 pub mod deploy;
 pub mod push;
+pub mod report;
 
 #[derive(Debug)]
 pub struct CmdOverrides {

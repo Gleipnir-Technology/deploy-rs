@@ -114,7 +114,7 @@ pub struct Opts {
 }
 
 /// Returns if the available Nix installation supports flakes
-async fn test_flake_support() -> Result<bool, std::io::Error> {
+pub async fn test_flake_support() -> Result<bool, std::io::Error> {
     debug!("Checking for flake support");
 
     Ok(Command::new("nix")
@@ -144,7 +144,7 @@ pub enum CheckDeploymentError {
     NixCheck(#[from] command::CommandError<NixCheckError>),
 }
 
-async fn check_deployment(
+pub async fn check_deployment(
     supports_flakes: bool,
     repo: &str,
     extra_build_args: &[String],
@@ -196,7 +196,7 @@ pub enum GetDeploymentDataError {
 }
 
 /// Evaluates the Nix in the given `repo` and return the processed Data from it
-async fn get_deployment_data(
+pub async fn get_deployment_data(
     supports_flakes: bool,
     flakes: &[deploy::DeployFlake<'_>],
     extra_build_args: &[String],
@@ -432,7 +432,7 @@ type ToDeploy<'a> = Vec<(
 )>;
 
 #[allow(clippy::too_many_arguments)]
-async fn run_deploy(
+pub async fn run_deploy(
     deploy_flakes: Vec<deploy::DeployFlake<'_>>,
     data: Vec<deploy::data::Data>,
     supports_flakes: bool,
@@ -696,10 +696,16 @@ pub enum RunError {
     RunDeploy(#[from] RunDeployError),
 }
 
-pub async fn run(args: Option<&ArgMatches>) -> Result<(), RunError> {
-    let opts = match args {
-        Some(o) => <Opts as FromArgMatches>::from_arg_matches(o)?,
-        None => Opts::parse(),
+async fn run_impl(
+    opts: Opts,
+    event_tx: Option<&tokio::sync::mpsc::Sender<crate::report::DeployEvent>>,
+) -> Result<(), RunError> {
+    use crate::report::{DeployEvent, DeployOutcome, DeployStep};
+
+    let emit = |step: DeployStep, node: Option<String>, profile: Option<String>, outcome: DeployOutcome| {
+        if let Some(tx) = event_tx {
+            let _ = tx.try_send(DeployEvent::new(step, node, profile, outcome));
+        }
     };
 
     deploy::init_logger(
@@ -746,7 +752,10 @@ pub async fn run(args: Option<&ArgMatches>) -> Result<(), RunError> {
         interactive_sudo: opts.interactive_sudo,
     };
 
+    emit(DeployStep::FlakeSupport, None, None, DeployOutcome::Started);
     let supports_flakes = test_flake_support().await.map_err(RunError::FlakeTest)?;
+    emit(DeployStep::FlakeSupport, None, None, DeployOutcome::Succeeded);
+
     let do_not_want_flakes = opts.file.is_some();
 
     if !supports_flakes {
@@ -761,11 +770,19 @@ pub async fn run(args: Option<&ArgMatches>) -> Result<(), RunError> {
 
     if !opts.skip_checks {
         for deploy_flake in &deploy_flakes {
+            let repo_str = deploy_flake.repo.to_string();
+            emit(DeployStep::CheckDeployment, None, Some(repo_str), DeployOutcome::Started);
             check_deployment(using_flakes, deploy_flake.repo, &opts.extra_build_args).await?;
+            let repo_str = deploy_flake.repo.to_string();
+            emit(DeployStep::CheckDeployment, None, Some(repo_str), DeployOutcome::Succeeded);
         }
     }
     let result_path = opts.result_path.as_deref();
+
+    emit(DeployStep::EvaluateData, None, None, DeployOutcome::Started);
     let data = get_deployment_data(using_flakes, &deploy_flakes, &opts.extra_build_args).await?;
+    emit(DeployStep::EvaluateData, None, None, DeployOutcome::Succeeded);
+
     run_deploy(
         deploy_flakes,
         data,
@@ -785,4 +802,19 @@ pub async fn run(args: Option<&ArgMatches>) -> Result<(), RunError> {
     .await?;
 
     Ok(())
+}
+
+pub async fn run(args: Option<&ArgMatches>) -> Result<(), RunError> {
+    let opts = match args {
+        Some(o) => <Opts as FromArgMatches>::from_arg_matches(o)?,
+        None => Opts::parse(),
+    };
+    run_impl(opts, None).await
+}
+
+pub async fn run_with_reporter(
+    opts: Opts,
+    event_tx: tokio::sync::mpsc::Sender<crate::report::DeployEvent>,
+) -> Result<(), RunError> {
+    run_impl(opts, Some(&event_tx)).await
 }
