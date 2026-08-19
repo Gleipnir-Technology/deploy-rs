@@ -26,91 +26,91 @@ use tokio::process::Command;
 pub struct Opts {
     /// The flake to deploy
     #[arg(group = "deploy")]
-    target: Option<String>,
+    pub target: Option<String>,
 
     /// A list of flakes to deploy alternatively
     #[arg(long, group = "deploy", num_args = 1..)]
-    targets: Option<Vec<String>>,
+    pub targets: Option<Vec<String>>,
     /// Treat targets as files instead of flakes
     #[clap(short, long)]
-    file: Option<String>,
+    pub file: Option<String>,
     /// Check signatures when using `nix copy`
     #[arg(short, long)]
-    checksigs: bool,
+    pub checksigs: bool,
     /// Use the interactive prompt before deployment
     #[arg(short, long)]
-    interactive: bool,
+    pub interactive: bool,
     /// Extra arguments to be passed to nix build
     #[arg(last = true)]
-    extra_build_args: Vec<String>,
+    pub extra_build_args: Vec<String>,
 
     /// Print debug logs to output
     #[arg(short, long)]
-    debug_logs: bool,
+    pub debug_logs: bool,
     /// Directory to print logs to (including the background activation process)
     #[arg(long)]
-    log_dir: Option<String>,
+    pub log_dir: Option<String>,
 
     /// Keep the build outputs of each built profile
     #[arg(short, long)]
-    keep_result: bool,
+    pub keep_result: bool,
     /// Location to keep outputs from built profiles in
     #[arg(short, long)]
-    result_path: Option<String>,
+    pub result_path: Option<String>,
 
     /// Skip the automatic pre-build checks
     #[arg(short, long)]
-    skip_checks: bool,
+    pub skip_checks: bool,
 
     /// Build on remote host
     #[arg(long)]
-    remote_build: bool,
+    pub remote_build: bool,
 
     /// Override the SSH user with the given value
     #[arg(long)]
-    ssh_user: Option<String>,
+    pub ssh_user: Option<String>,
     /// Override the profile user with the given value
     #[arg(long)]
-    profile_user: Option<String>,
+    pub profile_user: Option<String>,
     /// Override the SSH options used
     #[arg(long, allow_hyphen_values = true)]
-    ssh_opts: Option<String>,
+    pub ssh_opts: Option<String>,
     /// Override if the connecting to the target node should be considered fast
     #[arg(long)]
-    fast_connection: Option<bool>,
+    pub fast_connection: Option<bool>,
     /// Override if a rollback should be attempted if activation fails
     #[arg(long)]
-    auto_rollback: Option<bool>,
+    pub auto_rollback: Option<bool>,
     /// Override hostname used for the node
     #[arg(long)]
-    hostname: Option<String>,
+    pub hostname: Option<String>,
     /// Make activation wait for confirmation, or roll back after a period of time
     #[arg(long)]
-    magic_rollback: Option<bool>,
+    pub magic_rollback: Option<bool>,
     /// How long activation should wait for confirmation (if using magic-rollback)
     #[arg(long)]
-    confirm_timeout: Option<u16>,
+    pub confirm_timeout: Option<u16>,
     /// How long we should wait for profile activation
     #[arg(long)]
-    activation_timeout: Option<u16>,
+    pub activation_timeout: Option<u16>,
     /// Where to store temporary files (only used by magic-rollback)
     #[arg(long)]
-    temp_path: Option<PathBuf>,
+    pub temp_path: Option<PathBuf>,
     /// Show what will be activated on the machines
     #[arg(long)]
-    dry_activate: bool,
+    pub dry_activate: bool,
     /// Don't activate, but update the boot loader to boot into the new profile
     #[arg(long)]
-    boot: bool,
+    pub boot: bool,
     /// Revoke all previously succeeded deploys when deploying multiple profiles
     #[arg(long)]
-    rollback_succeeded: Option<bool>,
+    pub rollback_succeeded: Option<bool>,
     /// Which sudo command to use. Must accept at least two arguments: user name to execute commands as and the rest is the command to execute
     #[arg(long)]
-    sudo: Option<String>,
+    pub sudo: Option<String>,
     /// Prompt for sudo password during activation.
     #[arg(long)]
-    interactive_sudo: Option<bool>,
+    pub interactive_sudo: Option<bool>,
 }
 
 /// Returns if the available Nix installation supports flakes
